@@ -1,0 +1,642 @@
+\include{preamble}
+
+\title{\textbf{Triptych+}\\Even shorter linkable or accountable ring signatures using ring dependent commitment schemes}
+\author{Nikolas Krätzschmar}
+\date{\today}
+
+\begin{document}
+
+\newacro{EC}{Elliptic Curve}
+\newacroplural{EC}[EC]{Elliptic Curves}
+\newacro{SHVZK}{special honest-verifier zero-knowledge}
+
+\maketitle
+
+In this paper we present a novel linkable ring signature $\Sigma$--protocol, derived from \citetitle{triptych} \cite{triptych} by \citeauthor{triptych}, that achieves even shorter signatures without incurring any noticeable computational overhead.
+We show that its security only relies on the same cryptographic assumptions as Triptych, namely hardness of the discrete logarithm problem and Diffie-Hellman problems.
+
+Additionally, we provide an adaptation of our $\Sigma$--protocol into an accountable ring signature which also outperforms \citetitle{short_ring_signatures} \cite{short_ring_signatures} by \citeauthor{short_ring_signatures} in terms of size.
+
+\section{Notation}
+\label{notation}
+
+\begin{definition}
+	For a set $X$ we use the notation $x \from X$ to write an element $x \in X$ chosen uniformly at random.
+	For an algorithm $\A$ we use the notation $x \from \A$ to write that element $x$ is output by $\A$.
+\end{definition}
+
+\begin{definition}
+	Let $\G$ be a cyclic group of prime order $q$ with generator $G$ in which the discrete logarithm problem is hard and the decisional Diffie-Hellman assumption and inverse decisional Diffie-Hellman assumption \cite{dh_vars} hold.
+	We use additive notation for the group operation on $\G$, as is the convention for \acp{EC}.
+
+	\NB The inverse decisional Diffie-Hellman assumption is required for the way key images are constructed both in Triptych and in our novel construction.
+\end{definition}
+
+% \begin{definition}
+% 	Throughout this paper, we will consistently use the following convention for indices to avoid confusion:
+% 	\begin{itemize}
+% 		\item All vector and matrix indices start at $0$
+% 		\item $N=n^m$
+% 		\item $i$ used for indices $\in \{ 0, ..., m-1 \}$
+% 		\item $j$ used for indices $\in \{ 0, ..., n-1 \}$
+% 		\item $k$ used for indices $\in \{ 0, ..., N-1 \}$
+% 		\item $u$ used for indices $\in \{ 0, ..., d-1 \}$
+% 	\end{itemize}
+% \end{definition}
+
+\begin{definition}[Kronecker delta function]\label{def:delta}
+	Let the function $\delta : X \times X \to \{ 0, 1 \}$ be defined as the Kronecker delta function:
+	$$
+		\delta(x, y) = \begin{cases}
+			1 \; & \text{if } x = y \\
+			0 \; & \text{else}
+		\end{cases}
+	$$
+\end{definition}
+
+
+\clearpage
+
+
+\section{Commitment to a selection matrix}
+\label{commitment_mat}
+
+First we re-iterate the $\Sigma$--protocol of Fig. 4 in \cite{short_ring_signatures}.
+It proves that a commitment $B$ is a matrix Pedersen commitment to a special type of binary matrix, which will herein be refereed to as a selection matrix.
+
+This $\Sigma$--protocol is both used as a sub-protocol in the accountable ring signature protocol of \cite{short_ring_signatures} and the basis of the linkable ring signature protocol of \cite{triptych}.
+We will also use it as a sub-protocol in our ring signature construction.
+
+\begin{definition}[Selection Matrix]
+A selection matrix is herein defined as a binary matrix that has exactly one $1$ in each row and $0$s everywhere else.
+So formally a matrix $a \in \Z_q^{m \times n}$, with $n < q$, is a selection matrix if and only if
+$$\begin{matrix}
+	\forall i \in \{ 0, ..., m-1 \}, j \in \{ 0, ..., n-1 \} : a_{i,j} \in \{ 0, 1 \} \\
+	\land \; \forall i \in \{ 0, ..., m-1 \} : \sum_{j=0}^{n-1} a_{i,j} = 1
+\end{matrix}$$
+\end{definition}
+
+\cref{fig:commitment_mat} is a $\Sigma$--protocol for the following relation \Rref{rel:commitment_mat}, so in essence that a commitment $B$ is a commitment to a selection matrix.
+$$
+\R{rel:commitment_mat} = \left\{
+	(B, ((b_{i,j})_{i=0,j=0}^{m-1,n-1}, r_B)) \; \middle| \;
+	\begin{matrix}
+		(\forall i \in \{ 0, ..., m-1 \}, j \in \{ 0, ..., n-1 \} : b_{i,j} \in \{ 0, 1 \}) \\
+		\land \; (\forall i \in \{ 0, ..., m-1 \} : \sum_{j=0}^{n-1} b_{i,j} = 1) \\
+		\land \; B = \Com((b_{i,j})_{i=0,j=0}^{m-1,n-1}, r_B)
+	\end{matrix}
+\right\}
+$$
+
+\begin{theorem}\label{theorem:commitment_mat}
+	The $\Sigma$--protocol in \cref{fig:commitment_mat} is perfectly complete, \ac{SHVZK}, and $3$-special sound.
+\end{theorem}
+
+The proof of \cref{theorem:commitment_mat} is given in appendix B.1 of \cite{short_ring_signatures}.
+
+
+\begin{figure}[p]
+	\centering
+	\fbox{\begin{sigmaprotocol}[0.8\textwidth]
+		\prover[$\P_{\Rref{rel:commitment_mat}}(B, ((b_{i,j})_{i=0,j=0}^{m-1,n-1}, r_B))$]{
+			Select random $r_A, r_C, r_D, a_{i,j} \from \Z_q \quad \forall i \in \{ 0, ..., m-1 \}, j \in \{ 1, .., n-1 \}$ \\
+			For all $i \in \{ 0, ..., m-1 \}$ let
+			$$a_{i,0} = - \sum_{j=1}^{n-1} a_{i,j}$$
+			Define
+			$$\begin{aligned}
+				A &= \Com((a_{i,j})_{i=0,j=0}^{m-1,n-1}, r_A) \\
+				C &= \Com((a_{i,j}(1 - 2b_{i,j}))_{i=0,j=0}^{m-1,n-1}, r_C) \\
+				D &= \Com((-a_{i,j}^2)_{i=0,j=0}^{m-1,n-1}, r_D)
+			\end{aligned}$$
+		}{$(A, C, D)$}
+
+		\verifier[$\V_{\Rref{rel:commitment_mat}}(B, (A, C, D))$]{
+			Select random $x \from \Z_q$
+		}{$x$}
+
+		\prover[$\P_{\Rref{rel:commitment_mat}}(x)$]{
+			For all $i \in \{ 0, ..., m-1 \}, j \in \{ 1, .., n-1 \}$ define
+			$$\begin{aligned}
+				f_{i,j} &= x b_{i,j} + a_{i,j} \\
+				z_A     &= x r_B + r_A \\
+				z_C     &= x r_C + r_D
+			\end{aligned}$$
+		}{$(z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$}
+
+		\verifier[$\V_{\Rref{rel:commitment_mat}}(z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$]{
+			For all $i \in \{ 0, ..., m-1 \}$ let
+			$$f_{i,0} = x - \sum_{j=1}^{n-1} f_{i,j}$$
+			\par
+			Accept if and only if:
+			\begin{align}
+				x B + A &= \Com((f_{i,j})_{i=0,j=0}^{m-1,n-1}, z_A) \\
+				x C + D &= \Com((f_{i,j} (x - f_{i,j}))_{i=0,j=0}^{m-1,n-1}, z_C)
+			\end{align}
+		}{}
+	\end{sigmaprotocol}}
+	\caption{$\Sigma$--protocol for \Rref{rel:commitment_mat} (commitment to selection matrix) \cite{short_ring_signatures}}
+\label{fig:commitment_mat}\end{figure}
+
+
+\clearpage
+
+
+\section{Ring Signature}
+\label{ring}
+
+First we provide a modification of Triptych \cite{triptych}, reducing it to a simple ring signature without linkability properties and using a dynamic base $I$ rather than the constant generator $G$ for public keys.
+Then in section \ref{linkable}, using this initial construction as a sub-protocol, we re-introduce key images in a more efficient way, somewhat similar to how accountability is achieved in \cite{short_ring_signatures}.
+This construction can also be used to construct accountable ring signatures (section \ref{accountable}) that are even shorter than those of \cite{short_ring_signatures}.
+
+\cref{fig:ring} provides a $\Sigma$--protocol for the base $I$ ring signature relation \Rref{rel:ring}:
+$$\R{rel:ring} = \set{((I, (R_k)_{k=0}^{N-1}), (\ell, r))}{R_\ell = rI}$$
+
+It uses the following base $n$ decomposition of integers $k \in \{ 0, ..., N-1 \}$, where $N = n^m$.
+
+\begin{definition}[$n$-ary decomposition]
+	Let $N = n^m$ for some $n, m \in \N$.
+	For any $k \in \{ 0, ..., N-1 \}$ define the $n$-ary decomposition of $k$ as its unique representation as base $n$ digits $(k_0, ..., k_{m-1})$ such that
+	$$\forall i \in \{ 0, ..., m-1 \} : \; k_i \in \{ 0, ..., n-1 \} \quad \text{and} \quad k = \sum_{i=0}^{m-1} k_i n^i$$
+\end{definition}
+
+Additionally, this protocol uses the coefficients $p_{k,i}$ defined by the polynomials:
+$$p_k(x) = \prod_{i=0}^{m-1} f_{i,k_i} = \delta(\ell, k) x^m + \sum_{i=0}^{m-1} p_{k,i} x^i$$
+
+With $f_{i,k_i}$ being the responses in the protocol in \cref{fig:commitment_mat}.
+See \cite{one_out_of_many,short_ring_signatures} for the reasoning behind defining $p$ this way.
+
+\begin{theorem}\label{theorem:ring}
+	The $\Sigma$--protocol in \cref{fig:ring} is perfectly complete, \ac{SHVZK}, and $(m+1)$-special sound.
+\end{theorem}
+
+The proof of \cref{theorem:ring} follows analogous to the proof of Theorem 1 in \cite{triptych}.
+% TODO: consider re-iterating full proof here
+
+
+\begin{figure}[p]
+	\centering
+	\fbox{\begin{sigmaprotocol}[0.8\textwidth]
+		\prover[$\P_{\Rref{rel:ring}}((I, (R_k)_{k=0}^{N-1}), (\ell, r))$]{
+			Select random $r_B, \rho_i \from \Z_q \quad \forall i \in \{ 0, .., m-1 \}$ \\
+			For all $i \in \{ 0, ..., m-1 \}, j \in \{ 0, ..., n-1 \}$ let $b_{i,j} = \delta(\ell_i, j)$ \\
+			Define
+			$$B = \Com((b_{i,j})_{i=0,j=0}^{m-1,n-1}, r_B)$$
+			Get $(A, C, D) \from \P_{\Rref{rel:commitment_mat}}(B, ((b_{i,j})_{i=0,j=0}^{m-1,n-1}, r_B))$ \\
+			For all $i \in \{ 0, ..., m-1 \}$ define
+			$$X_i = \sum_{k=0}^{N-1} p_{k,i} R_k + \rho_i I$$
+		}{$(A, B, C, D, (X_i)_{i=0}^{m-1})$}
+
+		\verifier[$\V_{\Rref{rel:ring}}((I, (R_k)_{k=0}^{N-1}), (A, B, C, D, (X_i)_{i=0}^{m-1}))$]{
+			Get $x \from \V_{\Rref{rel:commitment_mat}}(B, (A, C, D))$
+		}{$x$}
+
+		\prover[$\P_{\Rref{rel:ring}}(x)$]{
+			Get $(z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1}) \from \P_{\Rref{rel:commitment_mat}}(x)$ \\
+			Define
+			$$z = x^m r - \sum_{i=0}^{m-1} x^i \rho_i$$
+		}{$(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$}
+
+		\verifier[$\V_{\Rref{rel:ring}}(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$]{
+			For all $i \in \{ 0, ..., m-1 \}$ let $f_{i,0} = x - \sum_{j=1}^{n-1} f_{i,j}$
+			\par
+			Accept if and only if: \\
+			$\V_{\Rref{rel:commitment_mat}}(z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$ accepts and
+			\begin{align}
+				\sum_{k=0}^{N-1} \left( \left( \prod_{i=0}^{m-1} f_{i,k_i} \right) R_k \right) - \sum_{i=0}^{m-1} x^i X_i = z I
+			\end{align}
+		}{}
+	\end{sigmaprotocol}}
+	\caption{$\Sigma$--protocol for \Rref{rel:ring} (ring signature with dynamic public key base $I$)}
+\label{fig:ring}\end{figure}
+
+
+\clearpage
+
+
+\section{Linkable Ring Signature}
+\label{linkable}
+
+Let $\H_\G : \{ 0, 1 \}^* \to \G$ be a secure hash function that hashes to group elements.
+
+\cref{fig:linkable} provides a $\Sigma$--protocol for the linkable ring signature relation using inversion key images, so for the relation \Rref{rel:linkable}:
+$$\R{rel:linkable} = \set{(((R_0, ..., R_{N-1}), J), \, (\ell, r))}{R_\ell = rG \; \land \; J = r^{-1} U}$$
+
+\begin{theorem}\label{theorem:linkable}
+	The $\Sigma$--protocol in \cref{fig:linkable} is perfectly complete, \ac{SHVZK}, and $(m+1)$-special sound.
+\end{theorem}
+
+Proof of \cref{theorem:linkable} follows below in section \ref{proof}.
+
+Applying the Fiat-Shamir heuristic to the protocol in \cref{fig:linkable} gives a linkable ring signature.
+
+This linkable ring signature consists of $m + 7 = \log_n(N) + 7$ group elements and $m(n-1) + 5 = (n-1) \log_n(N) + 5$ field elements.
+So for $n = 2$ and assuming group and field elements are of equal size, the signature size scales with regards to $N$ as $2 \log_2(N) + 12$.
+Therefore, for any $N > 32$ this novel construction produces shorter signatures than the construction in \cite{triptych} (Triptych).
+This is illustrated in \cref{fig:linkable}.
+For the concrete size in bytes we assume usage of \texttt{curve25519} \cite{curve25519}, so both group and scalar elements can be represented using 256 bits.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.6\textwidth]{build/linkable.pyplot}
+	\caption{Scalability of Triptych+ compared to Triptych}
+	\label{fig:linkable}
+\end{figure}
+
+
+\begin{figure}[p]
+	\centering
+	\fbox{\begin{sigmaprotocol}[0.8\textwidth]
+		\prover[$\P'_{\Rref{rel:linkable}}(((R_k)_{k=0}^{N-1}, J), (\ell, r))$]{
+			Let $I = \H_\G((R_k)_{k=0}^{N-1})$
+			\par
+			Select random $s, t, u \from \Z_q$ \\
+			Define
+			$$\begin{aligned}
+				K   &= rG + tI \\
+				S_1 &= sG + uI \\
+				S_2 &= sJ
+			\end{aligned}$$
+			For all $k \in \{ 0, ..., N-1 \}$ let
+			$$R'_k = R_k - K$$
+			Get $(A, B, C, D, (X_i)_{i=0}^{m-1}) \from \P_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1}), (\ell, -t))$
+		}{$(A, B, C, D, K, S_1, S_2, (X_i)_{i=0}^{m-1})$}
+
+		\verifier[$\V'_{\Rref{rel:linkable}}((R_k)_{k=0}^{N-1}, J), (A, B, C, D, K, S_1, S_2, (X_i)_{i=0}^{m-1})$]{
+			Let $I = \H_\G((R_k)_{k=0}^{N-1})$
+			\par
+			For all $k \in \{ 0, ..., N-1 \}$ let
+			$$R'_k = R_k - K$$
+			Get $x \from \V_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1}), (A, B, C, D, (X_i)_{i=0}^{m-1}))$
+		}{$x$}
+
+		\prover[$\P'_{\Rref{rel:linkable}}(x)$]{
+			Get $(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1}) \from \P_{\Rref{rel:ring}}(x)$ \\
+			Define
+			$$\begin{aligned}
+				z_G &= rx + s \\
+				z_I &= tx + u
+			\end{aligned}$$
+		}{$(z, z_A, z_C, z_G, z_I (f_{i,j})_{i=0,j=1}^{m-1,n-1})$}
+
+		\verifier[$\V'_{\Rref{rel:linkable}}(z, z_A, z_C, z_G, z_I, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$]{
+			Accept if and only if: \\
+			$\V_{\Rref{rel:ring}}(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$ accepts and
+			\begin{align}
+				xK + S_1 &= z_G G + z_I I \label{eq:linkable:1} \\
+				xU + S_2 &= z_G J \label{eq:linkable:2}
+			\end{align}
+		}{}
+	\end{sigmaprotocol}}
+	\caption{$\Sigma$--protocol for \Rref{rel:linkable} (linkable ring signature)}
+\label{fig:linkable}\end{figure}
+
+
+\clearpage
+
+
+\section{Multilayer Linkable Ring Signature}
+\label{linkable:multilayer}
+
+\cref{fig:linkable:multilayer:1} and \cref{fig:linkable:multilayer:2} provide a $\Sigma$--protocol for the same multilayer linkable ring signature relation \Rref{rel:linkable:multilayer} as the Triptychs multilayer linkable ring signature protocol.
+$$\R{rel:linkable:multilayer} = \set{(((R_{k,u})_{k=0,u=0}^{N-1,d-1}, J), \, (\ell, r_0, ..., r_{d-1}))}{R_{\ell,u} = r_u G \quad \forall u \in \{ 0, ..., d-1 \} \; \land \; J = r_0^{-1} U}$$
+
+\begin{theorem}\label{theorem:linkable:multilayer}
+	The $\Sigma$--protocol in \cref{fig:linkable:multilayer:1} and \cref{fig:linkable:multilayer:2} is perfectly complete, \ac{SHVZK}, and $d(m+1)$-special sound.
+\end{theorem}
+
+Proof of \cref{theorem:linkable:multilayer} follows below in section \ref{proof}.
+
+Applying the Fiat-Shamir heuristic to the protocol in \cref{fig:linkable:multilayer:1} and \cref{fig:linkable:multilayer:2} gives a multilayer linkable ring signature.
+
+This multilayer linkable ring signature consists of $m + 7 + (d-1) = \log_n(N) + d + 6$ group elements and $m(n-1) + 5 = (n-1) \log_n(N) + 5$ field elements.
+So for $n = 2$ and assuming group and field elements are of equal size, the signature size scales with regards to $N$ as $2 \log_2(N) + d + 11$.
+
+As with Triptych, our linkable multilayer ring signature can be used as a drop in replacement for MLSAG/cLSAG in the RingCT construction used by Monero to achieve even more scalable transaction proofs.
+
+
+\begin{figure}[p]
+	\centering
+	\fbox{\begin{sigmaprotocol}[0.8\textwidth]
+		\prover[$\P'_{\Rref{rel:linkable:multilayer}}(((R_{k,u})_{k=0,u=0}^{N-1,d-1}, J), (\ell, r_0, ..., r_{d-1}))$]{
+			For $u \in \{ 1, ..., d-1 \}$ define $V_u = r_u J$ and let
+			$$\mu = \H((R_{k,u})_{k=0,u=0}^{N-1,d-1}, J, (V_u)_{u=1}^{d-1})$$
+			\par
+			For $k \in \{ 0, ..., N-1 \}$ let
+			$$R_k = \sum_{u=0}^{d-1} \mu^u R_{k,u}$$
+			and let $I = \H_\G((R_k)_{k=0}^{N-1})$
+			\par
+			Select random $s, t, u \from \Z_q$ \\
+			Define
+			$$\begin{aligned}
+				K   &= \left( \sum_{u=0}^{d-1} \mu^u r_u \right) G + tI \\
+				S_1 &= sG + uI \\
+				S_2 &= sJ
+			\end{aligned}$$
+			For all $k \in \{ 0, ..., N-1 \}$ let
+			$$R'_k = R_k - K$$
+			Get $(A, B, C, D, (X_i)_{i=0}^{m-1}) \from \P_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1}), (\ell, -t))$
+		}{$(A, B, C, D, K, S_1, S_2, (V_u)_{u=1}^{d-1}, (X_i)_{i=0}^{m-1})$}
+
+		\verifier[$\V'_{\Rref{rel:linkable:multilayer}}((R_{k,u})_{k=0,u=0}^{N-1,d-1}, J), (A, B, C, D, K, S_1, S_2, (V_u)_{u=1}^{d-1}, (X_i)_{i=0}^{m-1})$]{
+			Let $\mu = \H((R_{k,u})_{k=0,u=0}^{N-1,d-1}, J, (V_u)_{u=1}^{d-1})$
+			\par
+			For $k \in \{ 0, ..., N-1 \}$ let
+			$$R_k = \sum_{u=0}^{d-1} \mu^u R_{k,u}$$
+			and let $I = \H_\G((R_k)_{k=0}^{N-1})$
+			\par
+			For all $k \in \{ 0, ..., N-1 \}$ let
+			$$R'_k = R_k - K$$
+			Get $x \from \V_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1}), (A, B, C, D, (X_i)_{i=0}^{m-1}))$
+		}{$x$}
+
+		\begin{center}
+			continued in \cref{fig:linkable:multilayer:2}
+		\end{center}
+	\end{sigmaprotocol}}
+	\caption{$\Sigma$--protocol for \Rref{rel:linkable:multilayer} (multilayer linkable ring signature)}
+\label{fig:linkable:multilayer:1}\end{figure}
+
+\begin{figure}[p]
+	\centering
+	\fbox{\begin{sigmaprotocol}[0.8\textwidth]
+		\begin{center}
+			continuation of \cref{fig:linkable:multilayer:1}
+		\end{center}
+
+		\prover[$\P'_{\Rref{rel:linkable:multilayer}}(x)$]{
+			Get $(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1}) \from \P_{\Rref{rel:ring}}(x)$ \\
+			Define
+			$$\begin{aligned}
+				z_G &= \left( \sum_{u=0}^{d-1} \mu^u r_u \right) x + s \\
+				z_I &= tx + u
+			\end{aligned}$$
+		}{$(z, z_A, z_C, z_G, z_I, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$}
+
+		\verifier[$\V'_{\Rref{rel:linkable:multilayer}}(z, z_A, z_C, z_G, z_I, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$]{
+			Accept if and only if: \\
+			$\V_{\Rref{rel:ring}}(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$ accepts and
+			\begin{align}
+				xK + S_1 &= z_G G + z_I I \label{eq:linkable:multilayer:1} \\
+				x \left( U + \left( \sum_{u=1}^{d-1} \mu^u V_u \right) \right) + S_2 &= z_G J \label{eq:linkable:multilayer:2}
+			\end{align}
+		}{}
+	\end{sigmaprotocol}}
+	\caption{$\Sigma$--protocol for \Rref{rel:linkable:multilayer} (multilayer linkable ring signature)}
+\label{fig:linkable:multilayer:2}\end{figure}
+
+
+\clearpage
+
+
+\section{Accountable Ring Signature}
+\label{accountable}
+
+\cref{fig:accountable} provides a $\Sigma$--protocol for the same accountable ring signature relation \Rref{rel:accountable} as \cite{short_ring_signatures}.
+$$\R{rel:accountable} = \set{(((R_k)_{k=0}^{N-1}, J), (\ell, r, u))}{R_\ell = rG \land J = \Enc_Q(R_\ell, u)}$$
+
+\begin{theorem}\label{theorem:accountable}
+	The $\Sigma$--protocol in \cref{fig:accountable} is perfectly complete, \ac{SHVZK}, and $(m+1)$-special sound.
+\end{theorem}
+
+Proof of \cref{theorem:accountable} follows below in section \ref{proof}.
+
+Applying the Fiat-Shamir heuristic to the protocol in \cref{fig:accountable} gives an accountable ring signature.
+
+This accountable ring signature consists of $m + 8 = \log_n(N) + 8$ group elements (two of those as components of an ElGamal ciphertext) and $m(n-1) + 6 = (n-1) \log_n(N) + 6$ field elements.
+So for $n = 2$ and assuming group and field elements are of equal size, the signature size scales with regards to $N$ as $2 \log_2(N) + 14$.
+Therefore, it always produces shorter accountable ring signatures than the construction in \cite{short_ring_signatures}.
+This is illustrated in \cref{fig:accountable}.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.6\textwidth]{build/accountable.pyplot}
+	\caption{Scalability of Triptych+ accountable ring signatures compared to \cite{short_ring_signatures}}
+	\label{fig:accountable}
+\end{figure}
+
+\begin{figure}[p]
+	\centering
+	\fbox{\begin{sigmaprotocol}[0.8\textwidth]
+		\prover[$\P'_{\Rref{rel:accountable}}(((R_k)_{k=0}^{N-1}, J), (\ell, r, u))$]{
+			Let $I = \H_\G((R_k)_{k=0}^{N-1})$
+			\par
+			Select random $s, t, u_1, u_2 \from \Z_q$ \\
+			Define
+			$$\begin{aligned}
+				K    &= rG + t I \\
+				S_1  &= sG + u_1 I \\
+				S_2  &= \Enc_Q(sG, u_2)
+			\end{aligned}$$
+			For all $k \in \{ 0, ..., N-1 \}$ let
+			$$R'_k = R_k - K$$
+			Get $(A, B, C, D, (X_i)_{i=0}^{m-1}) \from \P_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1}), (\ell, -t))$
+		}{$(A, B, C, D, K, S_1, S_2, (X_i)_{i=0}^{m-1})$}
+
+		\verifier[$\V'_{\Rref{rel:accountable}}((R_k)_{k=0}^{N-1}, J), (A, B, C, D, K, S_1, S_2, (X_i)_{i=0}^{m-1})$]{
+			Let $I = \H_\G((R_k)_{k=0}^{N-1})$
+			\par
+			For all $k \in \{ 0, ..., N-1 \}$ let
+			$$R'_k = R_k - K$$
+			Get $x \from \V_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1}), (A, B, C, D, (X_i)_{i=0}^{m-1}))$
+		}{$x$}
+
+		\prover[$\P'_{\Rref{rel:accountable}}(x)$]{
+			Get $(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1}) \from \P_{\Rref{rel:ring}}(x)$ \\
+			Define
+			$$\begin{aligned}
+				z_G &= rx + s \\
+				z_I &= tx + u_1 \\
+				z_Q &= ux + u_2
+			\end{aligned}$$
+		}{$(z, z_A, z_C, z_G, z_I, z_Q, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$}
+
+		\verifier[$\V'_{\Rref{rel:accountable}}(z, z_A, z_C, z_G, z_I, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$]{
+			Accept if and only if: \\
+			$\V_{\Rref{rel:ring}}(z, z_A, z_C, (f_{i,j})_{i=0,j=1}^{m-1,n-1})$ accepts and
+			\begin{align}
+				xK + S_1 &= z_G G + z_I I \label{eq:accountable:1} \\
+				xJ + S_2 &= \Enc_Q(z_G G, z_Q) \label{eq:accountable:2}
+			\end{align}
+		}{}
+	\end{sigmaprotocol}}
+	\caption{$\Sigma$--protocol for \Rref{rel:accountable} (accountable ring signature)}
+\label{fig:accountable}\end{figure}
+
+
+\clearpage
+
+
+\section{Security Proof}
+\label{proof}
+
+\begin{definition}\label{def:game}
+	Let $\G$ be a group of prime order $q$ and $G$ a generator of $\G$.
+	Consider a game between a challenger and a probabilistic polynomial-time player $\A$:
+	\begin{itemize}
+		\item $\A$ chooses $C \in \G$ and sends it to the challenger.
+		\item The challenger chooses $H \in \G$ and sends it to $\A$.
+		\item $\A$ chooses and returns $(a, b)$ to the challenger.
+	\end{itemize}
+	$\A$ wins iff $C = aG + bH$ and $b \ne 0$.
+\end{definition}
+
+\begin{lemma}\label{lemma:game}
+	If the discrete logarithm problem in $\G$ is hard the game in \cref{def:game} is similarly difficult.
+\end{lemma}
+
+\begin{proof}
+	To show this we construct an adversary $\A^*$ for the discrete logarithm problem using rewindable black-box access to an efficient adversary $\A$ for this game.
+	We consider $\A$ to be an efficient adversary if for any challenge $H \in \G$ it wins with non-negligible probability $\epsilon$.
+
+	To recall, the goal of the discrete logarithm problem adversary $\A^*$ is, given a group element $Y \in \G$, to output $y \in \Z_q$ such that $Y = yG$.
+
+	Adversary $\A^*$ proceeds as follows:
+	\begin{itemize}
+		\item $\A^*$ gets challenge $Y$ from the challenger and $C$ from $\A$.
+		\item $\A^*$ chooses random $z \from \Z^*_q$, queries $\A$ with challenge $zY$ and gets $(a_1, b_1)$ as response.
+		With probability of $\epsilon$, $\A$ is successful in responding with $(a_1, b_1)$, such that $b_1 \ne 0$ and
+		\begin{equation}\label{eq:game:1}
+			C = a_1 G + b_1 zY
+		\end{equation}
+		If $\A$ did not respond successfully $\A^*$ aborts.
+		\item $\A^*$ rewinds $\A$ to just before the previous step.
+		\item $\A^*$ chooses random $x \from \Z_q$, queries $\A$ with challenge $xG$ and gets $(a_2, b_2)$ as response.
+		With probability of $\epsilon$, $\A$ is successful in responding with $(a_2, b_2)$, such that $b_2 \ne 0$ and
+		\begin{equation}\label{eq:game:2}
+			C = a_2 G + b_2 xG
+		\end{equation}
+		If $\A$ did not respond successfully $\A^*$ aborts.
+
+		\NB Since $\A$ was rewound to after having chosen $C$ rather than re-run from the start the $C$ in \cref{eq:game:2} is still the same as in \cref{eq:game:1}.
+		\item $\A^*$ computes $y = z^{-1} b_1^{-1}(a_2 - a_1 + b_2 x)$ and sends it to the challenger.
+	\end{itemize}
+
+	If $\A$ is able to successfully respond to both queries then $b_1 \ne 0 \implies b_1^{-1}$ exists and from \cref{eq:game:1} and \cref{eq:game:2} we have that
+	$$\begin{aligned}
+		         & C = a_1 G + b_1 zY = a_2 G + b_2 xG \\
+		\implies & Y = z^{-1} b_1^{-1}(a_2 - a_1 + b_2 x) G = yG
+	\end{aligned}$$
+	So $y$ is the discrete logarithm of $Y$ to $G$ and therefore $\A^*$ also wins the discrete logarithm game.
+
+	If the probability that $\A$ wins the game for any query $H$ is $\epsilon$ the probability that $\A^*$ wins is $\epsilon^2$ since $\A$ needs to win for two distinct queries.
+\end{proof}
+
+\begin{corollary}\label{corollary:game}
+	From \cref{lemma:game} it follows directly that if a prover is able to somehow prove knowledge of an opening $(a, r)$ to a commitment $C$ such that $C = aG + rH$, where $H$ is a challenge chosen after the commitment $C$ was made, it implies that $r$ must be $0$.
+	Because if the prover had an opening with $r \ne 0$ this would be equivalent to winning the game in \cref{def:game}.
+\end{corollary}
+
+\begin{proof}[Proof of \cref{theorem:linkable}]
+	% completeness
+	First we show perfect completeness.
+	By the perfect completeness of the $\Sigma$--protocol in \cref{fig:ring} we have that $\V_{\Rref{rel:ring}}$ always accepts.
+	Correctness of \cref{eq:linkable:1} and \cref{eq:linkable:2} follows directly by expanding all terms:
+	$$\begin{matrix}
+	xK + S_1 = x(rG + tI) + sG + uI = (xr + s)G + (xt + u)I = z_G G + z_I I \\
+	xU + S_2 = x(rJ) + sJ = (xr + s)J = z_G J
+	\end{matrix}$$
+
+	% ZK
+	Next, we show that the protocol is \ac{SHVZK}.
+	For this, we describe a \ac{SHVZK} simulator.
+	The simulator randomly chooses $z_G, z_I \from \Z_q$ and $K \from \G$ and runs the \ac{SHVZK} simulator for $\P_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1})$, with $R'_k = R_k - K$.
+	It computes $S_1 = z_G G + z_I I - xK$ and $S_2 = z_G J - xU$
+	By the blinding property of Pedersen commitments $K$ and $S_1$ are indistinguishable from the commitments in a real proof, $J$ is indistinguishable from a real key image by the inverse decisional Diffie-Hellman assumption, and $z_G, z_I$ are uniformly random for both the real proof and the simulated and uniquely determine $S_1$ and $S_2$.
+
+	% soundness
+	To show $(m+1)$-special soundness consider responses $z_G, z_I$ and $z'_G, z'_I$ to two distinct challenges $x, x'$.
+	From the verification equation \cref{eq:linkable:1} we get
+	$$\begin{aligned}
+	x K + S_1 &= (x r + s)G + (x t + u)I &= z _G G + z _I I \\
+	x'K + S_1 &= (x'r + s)G + (x't + u)I &= z'_G G + z'_I I
+	\end{aligned}$$
+
+	Since $I$ was determined by the output of a secure hash function, which we'll model as a random oracle, it follows that the discrete logarithm relation between $G$ and $I$ is unknown to anyone including the prover.
+	Therefore we can get two systems of equations, the first:
+	$$\begin{aligned}
+	x r + s &= z _G \\
+	x'r + s &= z'_G
+	\end{aligned}$$
+	From which we can uniquely extract $r = \frac{z_G - z'_G}{x - x'}$ and subsequently $s = z_G - xr$, and the second:
+	$$\begin{aligned}
+	x t + u &= z _I \\
+	x't + u &= z'_I
+	\end{aligned}$$
+	From which we can uniquely extract $t = \frac{z_I - z'_I}{x - x'}$ and subsequently $u = z_I - xt$ such that $K = rG + tI$ and $S_1 = sG + uI$.
+	Observe that both $K$ and $S_1$ are essentially Pedersen commitments using $I$ in place of $H$ and that $(r, t)$ and $(s, u)$ are openings to $K$ and $S_1$ respectively.
+
+	$(m+1)$-special soundness of the $\Sigma$--protocol in \cref{fig:ring} provides an extractor for values $\ell$ and $t'$ such that $R'_\ell = t' I$.
+	$$\begin{aligned}
+	&\implies t' I = R'_\ell = R_\ell - K = R_\ell - (rG + tI) \\
+	&\implies R_\ell = rG + (t + t') I
+	\end{aligned}$$
+
+	So the prover knows an opening $(r, \tau = t + t')$ for commitment $R_\ell$ such that $R_\ell = rG + \tau I$.
+	Because $R_\ell$ was part of the input to $\H_\G((R_k)_{k=0}^{N-1}) = I$ it must have been chosen prior to knowledge of $I$ (assuming $\H_\G$ is a secure hash function) so it follows from \cref{corollary:game} that $\tau = 0$ which implies that $R_\ell = rG$.
+
+	Finally, it only remains to show that the key image $J$ was constructed correctly.
+	Using the same two distinct challenges $x, x'$ as above we get the following system of equations from the second verification equation \cref{eq:linkable:2}:
+	$$\begin{matrix}\begin{aligned}
+	x U + S_2 &= (x r' + s')J &= z _G J \\
+	x'U + S_2 &= (x'r' + s')J &= z'_G J \\
+	\end{aligned} \\ \\
+	\Updownarrow \\ \\
+	\begin{aligned}
+	x r + s' &= z _G \\
+	x'r + s' &= z'_G
+	\end{aligned}\end{matrix}$$
+	From which we can uniquely extract $r' = \frac{z_G - z'_G}{x - x'} = r$ and subsequently $s' = z_G - xr' = z_G - xr = s$ such that $U = r'J = rJ$ and $S_2 = s'J = sJ$.
+	$\implies U = rJ \implies J = r^{-1}U$
+\end{proof}
+
+\begin{proof}[Proof of \cref{theorem:linkable:multilayer}]
+	This proof follows somewhat analogous to the proof of Theorem 3 in \cite{triptych}.
+	Using the random oracle model the extractor is allowed to \emph{``program''} the random oracle, so we can treat the value $\mu$ as a challenge variable provided by the extractor.
+
+	Based on the $(m+1)$-special soundness of the sub-protocol in \cref{fig:ring} we can extract a witness of the form $\sum_{u=0}^{d-1} \mu^u r_u$ for any $\mu$ programmed as the random oracle output.
+	Doing this for $d$ distinct values of $\mu$ extracts $d$ evaluations of a degree $d-1$ polynomial thus uniquely determines all the coefficients $r_u$ for all $u \in \{ 0, ..., d-1 \}$.
+
+	\NB This would work analogous for $d-1$ independent $\mu_u$ (as in the original Triptych paper) by creating a system of $d$ linear equations with $d$ unknowns thus also extracting all unknowns
+
+	%\todo{Wouldn't this make it $d(m+1)$-special sound? Doesn't the same also apply to the proof of Triptych?}
+
+	With this extraction we get $(r_0 + \sum_{u=1}^{d-1} \mu^u r_u) J = U + \sum_{u=1}^{d-1} \mu^u K_u$ which implies $r_0 J = U$.
+
+	The rest of the proof follows directly from that of \cref{theorem:linkable}.
+\end{proof}
+
+\begin{proof}[Proof of \cref{theorem:accountable}]
+	This proof follows mostly analogous to that of \cref{theorem:linkable}.
+
+	% completeness
+	First we show perfect completeness.
+	By the perfect completeness of the $\Sigma$--protocol in \cref{fig:ring} we have that $\V_{\Rref{rel:ring}}$ always accepts.
+	Correctness of \cref{eq:accountable:1} and \cref{eq:accountable:2} follows directly by expanding all terms:
+	$$\begin{matrix}
+	xK + S_1 = x(rG + tI) + sG + uI = (xr + s)G + (xt + u)I = z_G G + z_I I \\
+	xJ + S_2 = x(\Enc_Q(R_\ell, u)) + \Enc_Q(sG, u_2) = \Enc((rx + s)G, ux + u_2) = \Enc_Q(z_G G, z_Q)
+	\end{matrix}$$
+
+	% ZK
+	Next, we show that the protocol is \ac{SHVZK}.
+	For this, we describe a \ac{SHVZK} simulator.
+	The simulator randomly chooses $z_G, z_I, z_Q \from \Z_q$ and $K \from \G$ and runs the \ac{SHVZK} simulator for $\P_{\Rref{rel:ring}}((I, (R'_k)_{k=0}^{N-1})$, with $R'_k = R_k - K$.
+	It computes $S_1 = z_G G + z_I I - xK$ and $S_2 = \Enc_Q(z_G G, z_Q) - xJ$
+	By the blinding property of Pedersen commitments $K$ and $S_1$ are indistinguishable from the commitments in a real proof, by the decisional Diffie-Hellman assumption $S_2$ is indistinguishable from ciphertexts used in a real proof, and $z_G, z_I$ are uniformly random for both the real proof and the simulated and uniquely determine $S_1$ and $S_2$.
+
+	% soundness
+	Analogous to the proof of \cref{theorem:linkable} we have an extractor for $\ell, r, s, t, u_1$ such that $R_\ell = rG$, $K = rG + tI$, and $S_1 = sG + u_1 I$.
+	It only remains to show that the encryption $J$ to $R_\ell$ was constructed correctly.
+	Using the two distinct challenges $x, x'$ we get the following system of equations from the second verification equation \cref{eq:accountable:2}:
+	$$\begin{aligned}
+	x J + S_2 &= \Enc_Q((x r' + s')G, x u + u_2) &= \Enc_Q(z _G G, z _Q) \\
+	x'J + S_2 &= \Enc_Q((x r' + s')G, x u + u_2) &= \Enc_Q(z'_G G, z'_Q) \\
+	\end{aligned}$$
+	From which we can uniquely extract $r' = \frac{z_G - z'_G}{x - x'} = r$, $s' = z_G - xr' = z_G - xr = s$, $u = \frac{z_Q - z'_Q}{x - x'}$, and $u_2 = z_Q - xu$ such that $J = \Enc_Q(r'G, u) = \Enc_Q(R_\ell, u)$
+\end{proof}
+
+
+\clearpage
+\printbibliography
+
+\end{document}

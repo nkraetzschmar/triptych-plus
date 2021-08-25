@@ -1,0 +1,82 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage[style=alphabetic,citestyle=alphabetic]{biblatex}
+\usepackage{hyperref}
+\usepackage[a4paper]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage[nolist]{acronym}
+\usepackage{xifthen}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[capitalise,nameinlink]{cleveref}
+\usepackage{chngcntr}
+
+\numberwithin{equation}{section}
+\counterwithin{figure}{section}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{corollary}{Corollary}[section]
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+\newcommand\NB{\textbf{$\text{N}\!\!\text{B} \;$}}
+\newcommand\N{\mathbb N}
+\newcommand\Z{\mathbb Z}
+\newcommand\G{\mathbb G}
+\renewcommand\P{\mathcal P}
+\newcommand\V{\mathcal V}
+\newcommand\A{\mathcal A}
+\renewcommand\H{\mathcal H}
+\newcommand\from{\leftarrow}
+\newcommand\Com{\text{Com}}
+\newcommand\Enc{\text{Enc}}
+
+\newcommand\set[2]{\Big\{ \, #1 \; \Big| \; #2 \, \Big\}}
+\newcommand\prob[2]{\text{Pr} \Big[ \, #1 \; : \; #2 \, \Big]}
+
+\newcounter{relationcntr}
+\newcommand{\R}[1]{\refstepcounter{relationcntr}\mathcal{R}_{\therelationcntr}\label{#1}}
+\newcommand{\Rref}[1]{\ensuremath{\mathcal{R}_{\ref{#1}}}}
+
+\newenvironment{indentedblock}[1][0.5em]
+{
+	\par
+	\leftskip#1\relax
+}
+{
+	\par
+}
+
+\newenvironment{sigmaprotocol}[1][\textwidth]{%
+	\newcommand\prover[3][$\P$]{
+		\underline{\textbf{Prover} ##1:}
+		\begin{indentedblock}
+			##2
+			\ifthenelse{\isempty{##3}}{}{\par Send ##3 $\to$ Verifier}
+		\end{indentedblock}
+		\vspace{1.5\parskip}
+	}%
+	\newcommand\verifier[3][$\V$]{
+		\underline{\textbf{Verifier} ##1:}
+		\begin{indentedblock}
+			##2
+			\ifthenelse{\isempty{##3}}{}{\par Send ##3 $\to$ Prover}
+		\end{indentedblock}
+		\vspace{1.5\parskip}
+	}%
+	\begin{minipage}{#1}
+		\setlength{\parskip}{0.5\baselineskip}
+}{
+	\end{minipage}%
+}
+
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{0.5\baselineskip}
+
+\addbibresource{bibliography.bib}
