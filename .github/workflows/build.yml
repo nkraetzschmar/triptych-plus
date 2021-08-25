@@ -16,8 +16,8 @@ jobs:
         run: docker run -v "$PWD":/data build_env make
       - uses: actions/upload-artifact@v2
         with:
-          name: thesis
-          path: build/thesis.pdf
+          name: paper
+          path: build/paper.pdf
 
   release:
     name: release
@@ -29,9 +29,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: thesis
+          name: paper
 
       - uses: "marvinpinto/action-automatic-releases@v1.2.0"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          files: thesis.pdf
+          files: paper.pdf
