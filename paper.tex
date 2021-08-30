@@ -76,6 +76,14 @@ $$\begin{matrix}
 \end{matrix}$$
 \end{definition}
 
+\begin{definition}[Matrix Pedersen Commitments]
+	A matrix Pedersen commitment is a generalisation of Pedersen commitments \cite{pedersen}.
+	Given a set of generators $G, H_{i,j} \in \G$ for all $i \in \{ 0, ..., m-1 \}, j \in \{ 0, ..., n-1 \}$ all with pairwise unknown discrete logarithm relations between them, the matrix Pedersen commitment to a matrix $a \in \Z_q^{m \times n}$ with randomness $r \in \Z_q$ is defined as
+	$$\Com : \Z_q^{m \times n} \times \Z_q \to \G, \; \Com(a, r) = \sum_{i=0}^{m-1} \left( \sum_{j=0}^{n-1} a_{i,j} H_{i,j} \right) + rG$$
+
+	Matrix Pedersen commitments maintain the same properties of regular Pedersen commitments: additively homomorphic, perfectly hiding, and strongly computationally binding \cite{short_ring_signatures}.
+\end{definition}
+
 \cref{fig:commitment_mat} is a $\Sigma$--protocol for the following relation \Rref{rel:commitment_mat}, so in essence that a commitment $B$ is a commitment to a selection matrix.
 $$
 \R{rel:commitment_mat} = \left\{
